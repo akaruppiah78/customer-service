@@ -21,6 +21,25 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
+/**
+ * Service class for managing customer operations.
+ * 
+ * <p>This service provides business logic for customer management including:</p>
+ * <ul>
+ *   <li>Creating new customers with validation</li>
+ *   <li>Retrieving customers by ID or search criteria</li>
+ *   <li>Updating existing customer information</li>
+ *   <li>Deleting customers</li>
+ *   <li>Email uniqueness validation</li>
+ *   <li>Pagination and filtering support</li>
+ * </ul>
+ * 
+ * <p>All operations are transactional and include comprehensive logging and error handling.</p>
+ * 
+ * @author Customer Service Team
+ * @version 1.0.0
+ * @since 1.0.0
+ */
 @Service
 @Transactional
 public class CustomerService {
@@ -30,11 +49,27 @@ public class CustomerService {
     private final CustomerRepository customerRepository;
     private final CustomerMapper customerMapper;
     
+    /**
+     * Constructs a new CustomerService with the required dependencies.
+     * 
+     * @param customerRepository the repository for customer data access
+     * @param customerMapper the mapper for converting between entities and DTOs
+     */
     public CustomerService(CustomerRepository customerRepository, CustomerMapper customerMapper) {
         this.customerRepository = customerRepository;
         this.customerMapper = customerMapper;
     }
     
+    /**
+     * Creates a new customer in the system.
+     * 
+     * <p>This method validates that the email address is unique before creating the customer.
+     * A unique customer ID is automatically generated and assigned.</p>
+     * 
+     * @param request the customer creation request containing customer details
+     * @return the created customer as a response DTO
+     * @throws DuplicateEmailException if a customer with the same email already exists
+     */
     public CustomerResponse createCustomer(CreateCustomerRequest request) {
         logger.info("Creating customer with email: {}", request.email());
         

@@ -10,9 +10,44 @@ import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 
+/**
+ * Mapper component for converting between Customer entities and DTOs.
+ * 
+ * <p>This mapper provides bidirectional conversion between:</p>
+ * <ul>
+ *   <li>{@link CreateCustomerRequest} DTOs and {@link Customer} entities</li>
+ *   <li>{@link UpdateCustomerRequest} DTOs and {@link Customer} entities</li>
+ *   <li>{@link Customer} entities and {@link CustomerResponse} DTOs</li>
+ *   <li>{@link Customer} entities and {@link CustomerSummary} DTOs</li>
+ * </ul>
+ * 
+ * <p>The mapper handles:</p>
+ * <ul>
+ *   <li>Default value assignment (e.g., ACTIVE status for new customers)</li>
+ *   <li>Audit field management for creation and updates</li>
+ *   <li>Null-safe conversions</li>
+ *   <li>Data transformation between different representations</li>
+ * </ul>
+ * 
+ * @author Customer Service Team
+ * @version 1.0.0
+ * @since 1.0.0
+ */
 @Component
 public class CustomerMapper {
     
+    /**
+     * Converts a customer creation request to a Customer entity.
+     * 
+     * <p>This method sets default values where appropriate:</p>
+     * <ul>
+     *   <li>Customer status defaults to ACTIVE if not specified</li>
+     *   <li>Audit fields (createdAt, updatedAt) are set to current time</li>
+     * </ul>
+     * 
+     * @param request the customer creation request containing customer data
+     * @return a new Customer entity ready for persistence
+     */
     public Customer toEntity(CreateCustomerRequest request) {
         Customer customer = new Customer();
         customer.setFirstName(request.firstName());
@@ -31,6 +66,12 @@ public class CustomerMapper {
         return customer;
     }
     
+    /**
+     * Converts a Customer entity to a CustomerResponse DTO.
+     * 
+     * @param customer the Customer entity to convert
+     * @return a CustomerResponse DTO containing all customer information
+     */
     public CustomerResponse toResponse(Customer customer) {
         return new CustomerResponse(
             customer.getCustomerId(),

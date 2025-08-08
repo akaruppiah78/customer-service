@@ -18,6 +18,26 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * REST controller for customer management operations.
+ * 
+ * <p>This controller provides HTTP endpoints for:</p>
+ * <ul>
+ *   <li>Creating new customers</li>
+ *   <li>Retrieving customers by ID</li>
+ *   <li>Updating existing customers</li>
+ *   <li>Deleting customers</li>
+ *   <li>Listing customers with pagination and filtering</li>
+ *   <li>Searching customers by name</li>
+ * </ul>
+ * 
+ * <p>All endpoints return standardized {@link ApiResponse} objects and include
+ * comprehensive OpenAPI documentation for automatic API documentation generation.</p>
+ * 
+ * @author Customer Service Team
+ * @version 1.0.0
+ * @since 1.0.0
+ */
 @RestController
 @RequestMapping("/api/v1/customers")
 @Tag(name = "Customer Management", description = "APIs for managing customer information")
@@ -27,10 +47,24 @@ public class CustomerController {
     
     private final CustomerService customerService;
     
+    /**
+     * Constructs a new CustomerController with the required service dependency.
+     * 
+     * @param customerService the service for customer business operations
+     */
     public CustomerController(CustomerService customerService) {
         this.customerService = customerService;
     }
     
+    /**
+     * Creates a new customer in the system.
+     * 
+     * <p>This endpoint validates the request data and creates a new customer record.
+     * Email addresses must be unique across all customers.</p>
+     * 
+     * @param request the customer creation request containing all required customer details
+     * @return HTTP 201 with the created customer data, or appropriate error response
+     */
     @PostMapping
     @Operation(
         summary = "Create a new customer",
