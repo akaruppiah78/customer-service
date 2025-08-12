@@ -136,10 +136,10 @@ public class CustomerService {
             .orElseThrow(() -> new CustomerNotFoundException(customerId));
         
         // Check for duplicate email if email is being updated
-        if (request.email() != null && !request.email().equals(existingCustomer.getEmail())) {
-            if (customerRepository.existsByEmailAndCustomerIdNot(request.email(), customerId)) {
-                throw new DuplicateEmailException(request.email());
-            }
+        if (request.email() != null
+            && !request.email().equals(existingCustomer.getEmail())
+            && customerRepository.existsByEmailAndCustomerIdNot(request.email(), customerId)) {
+            throw new DuplicateEmailException(request.email());
         }
         
         // Update entity from request

@@ -20,7 +20,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -208,5 +208,88 @@ class CustomerControllerTest {
             .andExpect(jsonPath("$.status").value("SUCCESS"))
             .andExpect(jsonPath("$.data.customers").isArray())
             .andExpect(jsonPath("$.data.customers[0].firstName").value("John"));
+    }
+    
+    @Test
+    void should_ReturnNotFound_When_DeletingNonexistentCustomer() throws Exception {
+        // Given
+        doThrow(new CustomerNotFoundException("nonexistent-id")).when(customerService).deleteCustomer("nonexistent-id");
+
+        // When & Then
+        mockMvc.perform(delete("/api/v1/customers/nonexistent-id"))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.status").value("ERROR"))
+            .andExpect(jsonPath("$.message").value("Customer not found with ID: nonexistent-id"));
+    }
+
+    @Test
+    void should_ReturnBadRequest_When_InvalidUpdateRequest() throws Exception {
+        // Given
+        UpdateCustomerRequest invalidRequest = new UpdateCustomerRequest(
+            "", "", "invalid-email", "invalid-phone", null, null, null
+        );
+
+        // When & Then
+        mockMvc.perform(put("/api/v1/customers/test-id-123")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(invalidRequest)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.status").value("ERROR"))
+            .andExpect(jsonPath("$.message").value("Validation failed"));
+    }
+
+    @Test
+    void should_ReturnNotFound_When_UpdatingNonexistentCustomer() throws Exception {
+        // Given
+        UpdateCustomerRequest request = new UpdateCustomerRequest(
+            "John", "Smith", "john.smith@example.com", "+0987654321",
+            "456 Oak Ave", LocalDate.of(1990, 1, 1), CustomerStatus.INACTIVE
+        );
+        when(customerService.updateCustomer(eq("nonexistent-id"), any(UpdateCustomerRequest.class)))
+            .thenThrow(new CustomerNotFoundException("nonexistent-id"));
+
+        // When & Then
+        mockMvc.perform(put("/api/v1/customers/nonexistent-id")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.status").value("ERROR"))
+            .andExpect(jsonPath("$.message").value("Customer not found with ID: nonexistent-id"));
+    }
+
+    @Test
+    void should_GetCustomers_WithStatusFilter() throws Exception {
+        // Given
+        CustomerListResponse.CustomerSummary summary = new CustomerListResponse.CustomerSummary(
+            "test-id-123", "John", "Doe", "john.doe@example.com", CustomerStatus.ACTIVE
+        );
+        CustomerListResponse response = new CustomerListResponse(
+            List.of(summary), 0, 10, 1, 1, false, false
+        );
+        when(customerService.getCustomers(0, 10, CustomerStatus.ACTIVE)).thenReturn(response);
+
+        // When & Then
+        mockMvc.perform(get("/api/v1/customers?status=ACTIVE"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("SUCCESS"))
+            .andExpect(jsonPath("$.data.customers").isArray())
+            .andExpect(jsonPath("$.data.customers[0].customerId").value("test-id-123"))
+            .andExpect(jsonPath("$.data.totalElements").value(1));
+    }
+
+    @Test
+    void should_SearchCustomers_ReturnEmpty_When_NoResults() throws Exception {
+        // Given
+        CustomerListResponse response = new CustomerListResponse(
+            List.of(), 0, 10, 0, 0, false, false
+        );
+        when(customerService.searchCustomers("Jane", 0, 10)).thenReturn(response);
+
+        // When & Then
+        mockMvc.perform(get("/api/v1/customers/search?name=Jane"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("SUCCESS"))
+            .andExpect(jsonPath("$.data.customers").isArray())
+            .andExpect(jsonPath("$.data.customers").isEmpty());
     }
 }

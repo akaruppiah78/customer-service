@@ -75,7 +75,7 @@ public class Customer {
      * Indexed in MongoDB for fast lookups.
      */
     @NotBlank(message = "Phone number is required")
-    @Pattern(regexp = "^\\+?[0-9]{10,15}$", message = "Phone number must be in international format")
+    @Pattern(regexp = "^\\+?\\d{10,15}$", message = "Phone number must be in international format")
     @Indexed
     private String phone;
     

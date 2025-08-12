@@ -145,8 +145,95 @@ class CustomerServiceTest {
         
         // Then
         assertThat(result.customers()).hasSize(1);
+    assertThat(result.totalElements()).isEqualTo(1);
+        assertThat(result.page()).isZero();
+        assertThat(result.size()).isEqualTo(10);
+    }
+    
+    @Test
+    void should_GetCustomers_When_StatusFilterIsApplied() {
+        // Given
+        List<Customer> customers = List.of(customer);
+        Page<Customer> customerPage = new PageImpl<>(customers, PageRequest.of(0, 10), 1);
+        CustomerListResponse.CustomerSummary summary = new CustomerListResponse.CustomerSummary(
+            "test-id-123", "John", "Doe", "john.doe@example.com", CustomerStatus.ACTIVE
+        );
+        when(customerRepository.findByCustomerStatus(eq(CustomerStatus.ACTIVE), any(Pageable.class))).thenReturn(customerPage);
+        when(customerMapper.toSummary(customer)).thenReturn(summary);
+
+        // When
+        CustomerListResponse result = customerService.getCustomers(0, 10, CustomerStatus.ACTIVE);
+
+        // Then
+        assertThat(result.customers()).hasSize(1);
         assertThat(result.totalElements()).isEqualTo(1);
-        assertThat(result.page()).isEqualTo(0);
+        assertThat(result.page()).isZero();
+        assertThat(result.size()).isEqualTo(10);
+    }
+
+    @Test
+    void should_GetCustomers_WithDefaultPageAndSize_When_InvalidPageAndSize() {
+        // Given
+        List<Customer> customers = List.of();
+        Page<Customer> customerPage = new PageImpl<>(customers, PageRequest.of(0, 10), 0);
+        when(customerRepository.findAll(any(Pageable.class))).thenReturn(customerPage);
+
+        // When
+        CustomerListResponse result = customerService.getCustomers(-1, 0, null);
+
+        // Then
+        assertThat(result.customers()).isEmpty();
+        assertThat(result.page()).isZero();
+        assertThat(result.size()).isEqualTo(10);
+    }
+    
+    @Test
+    void should_SearchCustomers_ReturnResults() {
+        // Given
+        List<Customer> customers = List.of(customer);
+        Page<Customer> customerPage = new PageImpl<>(customers, PageRequest.of(0, 10), 1);
+        CustomerListResponse.CustomerSummary summary = new CustomerListResponse.CustomerSummary(
+            "test-id-123", "John", "Doe", "john.doe@example.com", CustomerStatus.ACTIVE
+        );
+        when(customerRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(eq("John"), eq("John"), any(Pageable.class))).thenReturn(customerPage);
+        when(customerMapper.toSummary(customer)).thenReturn(summary);
+
+        // When
+        CustomerListResponse result = customerService.searchCustomers("John", 0, 10);
+
+        // Then
+        assertThat(result.customers()).hasSize(1);
+        assertThat(result.page()).isZero();
+        assertThat(result.size()).isEqualTo(10);
+    }
+
+    @Test
+    void should_SearchCustomers_ReturnEmpty_When_NoResults() {
+        // Given
+        Page<Customer> customerPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+        when(customerRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(eq("Jane"), eq("Jane"), any(Pageable.class))).thenReturn(customerPage);
+
+        // When
+        CustomerListResponse result = customerService.searchCustomers("Jane", 0, 10);
+
+        // Then
+        assertThat(result.customers()).isEmpty();
+        assertThat(result.page()).isZero();
+        assertThat(result.size()).isEqualTo(10);
+    }
+
+    @Test
+    void should_SearchCustomers_WithDefaultPageAndSize_When_InvalidPageAndSize() {
+        // Given
+        Page<Customer> customerPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
+        when(customerRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(anyString(), anyString(), any(Pageable.class))).thenReturn(customerPage);
+
+        // When
+        CustomerListResponse result = customerService.searchCustomers("John", -1, 0);
+
+        // Then
+        assertThat(result.customers()).isEmpty();
+        assertThat(result.page()).isZero();
         assertThat(result.size()).isEqualTo(10);
     }
     
@@ -184,6 +271,23 @@ class CustomerServiceTest {
     }
     
     @Test
+    void should_UpdateCustomer_When_EmailNotChanged() {
+        // Given
+        customer.setEmail(updateRequest.email());
+        when(customerRepository.findById("test-id-123")).thenReturn(Optional.of(customer));
+        when(customerRepository.save(customer)).thenReturn(customer);
+        when(customerMapper.toResponse(customer)).thenReturn(customerResponse);
+
+        // When
+        CustomerResponse result = customerService.updateCustomer("test-id-123", updateRequest);
+
+        // Then
+        assertThat(result).isEqualTo(customerResponse);
+        verify(customerMapper).updateEntityFromRequest(updateRequest, customer);
+        verify(customerRepository).save(customer);
+    }
+    
+    @Test
     void should_DeleteCustomer_When_CustomerExists() {
         // Given
         when(customerRepository.existsById("test-id-123")).thenReturn(true);
@@ -206,5 +310,26 @@ class CustomerServiceTest {
             .hasMessageContaining("nonexistent-id");
         
         verify(customerRepository, never()).deleteById(anyString());
+    }
+    
+    @Test
+    void shouldThrowExceptionWhenUpdatingNonExistentCustomer() {
+        // Given
+        String customerId = "nonexistent-id";
+        UpdateCustomerRequest request = new UpdateCustomerRequest(
+            "Jane", "Smith", "jane.smith@example.com", "+1234567890", 
+            "123 Main St", null, null
+        );
+        
+        when(customerRepository.findById(customerId)).thenReturn(Optional.empty());
+        
+        // When & Then
+        assertThatThrownBy(() -> customerService.updateCustomer(customerId, request))
+            .isInstanceOf(CustomerNotFoundException.class)
+            .hasMessage("Customer not found with ID: " + customerId);
+        
+        verify(customerRepository).findById(customerId);
+        verifyNoMoreInteractions(customerRepository);
+        verifyNoInteractions(customerMapper);
     }
 }

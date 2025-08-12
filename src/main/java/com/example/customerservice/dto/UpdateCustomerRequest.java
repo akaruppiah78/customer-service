@@ -49,7 +49,7 @@ public record UpdateCustomerRequest(
     @Email(message = "Email must be valid")
     String email,
     
-    @Pattern(regexp = "^\\+?[0-9]{10,15}$", message = "Phone number must be in international format")
+    @Pattern(regexp = "^\\+?\\d{10,15}$", message = "Phone number must be in international format")
     String phone,
     
     @Size(max = 200, message = "Address must not exceed 200 characters")
